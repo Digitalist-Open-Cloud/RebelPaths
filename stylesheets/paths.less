@@ -1,0 +1,300 @@
+@rebelPathsLeft: #c8553d;
+
+.rebelPaths {
+  h3 {
+    margin: 28px 0 4px;
+  }
+
+  .rebelPathsHelp {
+    color: @theme-color-text-lighter;
+    max-width: 70ch;
+    margin: 0 0 14px;
+  }
+
+  .rebelPathsSwitch {
+    display: flex;
+    gap: 6px;
+  }
+
+  .rebelPathsBy {
+    border: 1px solid @theme-color-border;
+    background: @theme-color-background-base;
+    color: @theme-color-text;
+    border-radius: 4px;
+    padding: 5px 12px;
+    cursor: pointer;
+
+    &.active {
+      border-color: @theme-color-brand;
+      color: @theme-color-brand;
+      font-weight: bold;
+    }
+  }
+
+  .rebelPathsPath {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 120px 90px;
+    gap: 14px;
+    align-items: center;
+    padding: 7px 0;
+    border-bottom: 1px solid @theme-color-background-tinyContrast;
+  }
+
+  .rebelPathsChips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .rebelPathsChip {
+    border: 1px solid @theme-color-border;
+    background: @theme-color-background-tinyContrast;
+    border-radius: 4px;
+    padding: 2px 9px;
+    overflow-wrap: anywhere;
+  }
+
+  .rebelPathsChipLeft {
+    border-color: @rebelPathsLeft;
+    color: @rebelPathsLeft;
+    background: none;
+  }
+
+  .rebelPathsArrow {
+    color: @theme-color-text-lighter;
+  }
+
+  .rebelPathsMeterBar {
+    display: block;
+    height: 8px;
+    min-width: 3px;
+    border-radius: 4px;
+    background: @theme-color-brand;
+  }
+
+  .rebelPathsCount {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .rebelPathsLegend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    color: @theme-color-text-lighter;
+    margin-bottom: 12px;
+
+    i {
+      display: inline-block;
+      width: 11px;
+      height: 11px;
+      border-radius: 2px;
+      margin-right: 6px;
+    }
+  }
+
+  .rebelPathsLegendOn {
+    background: @theme-color-brand;
+  }
+
+  .rebelPathsLegendLeft {
+    background: @rebelPathsLeft;
+  }
+
+  .rebelPathsFlow {
+    overflow-x: auto;
+
+    svg {
+      display: block;
+      width: 100%;
+      min-width: 760px;
+    }
+
+    text {
+      font-size: 12px;
+      fill: @theme-color-text;
+    }
+
+    .rebelPathsFlowStep,
+    .rebelPathsFlowNumbers {
+      font-size: 11px;
+      fill: @theme-color-text-lighter;
+    }
+
+    .rebelPathsFlowStep {
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: bold;
+    }
+  }
+
+  .rebelPathsFlowLink {
+    fill: none;
+    stroke: @theme-color-brand;
+    opacity: 0.2;
+
+    &.active {
+      opacity: 0.6;
+    }
+  }
+
+  .rebelPathsFlowNode {
+    cursor: pointer;
+    outline: none;
+  }
+
+  .rebelPathsFlowHit {
+    fill: transparent;
+  }
+
+  .rebelPathsFlowOn {
+    fill: @theme-color-brand;
+  }
+
+  .rebelPathsFlowLeft {
+    fill: @rebelPathsLeft;
+  }
+
+  .rebelPathsExplorer {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(190px, 1fr);
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+  }
+
+  .rebelPathsAroundLabel {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+
+    select {
+      width: auto;
+      max-width: 100%;
+    }
+  }
+
+  .rebelPathsAround {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(170px, 1fr));
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+  }
+
+  .rebelPathsAroundCentre {
+    border-color: @theme-color-brand;
+    box-shadow: inset 0 3px 0 @theme-color-brand;
+    font-weight: bold;
+  }
+
+  .rebelPathsAroundVisits {
+    font-size: 26px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // Here the bar is a share of the visits of the page, so what is left of it means nothing.
+  .rebelPathsStepBar.rebelPathsAroundBar {
+    background: @theme-color-border;
+  }
+
+  .rebelPathsStartedHere {
+    border: 1px dashed @theme-color-border;
+    color: @theme-color-text-lighter;
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .rebelPathsColumn {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .rebelPathsColumnTitle {
+    color: @theme-color-text-lighter;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 11px;
+    font-weight: bold;
+  }
+
+  .rebelPathsStep {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    box-sizing: border-box;
+    color: @theme-color-text;
+    background: @theme-color-background-base;
+    border: 1px solid @theme-color-border;
+    border-radius: 4px;
+    padding: 8px 10px;
+  }
+
+  .rebelPathsStepPick {
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      border-color: @theme-color-brand;
+    }
+
+    &.active {
+      border-color: @theme-color-brand;
+      background: @theme-color-background-tinyContrast;
+      box-shadow: inset 3px 0 0 @theme-color-brand;
+    }
+  }
+
+  .rebelPathsStepRow {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .rebelPathsStepLabel {
+    overflow-wrap: anywhere;
+  }
+
+  .rebelPathsStepVisits {
+    font-variant-numeric: tabular-nums;
+    font-weight: bold;
+  }
+
+  .rebelPathsStepBar {
+    display: block;
+    height: 6px;
+    border-radius: 3px;
+    background: @rebelPathsLeft;
+    overflow: hidden;
+  }
+
+  .rebelPathsStepBarOn {
+    display: block;
+    height: 100%;
+    background: @theme-color-brand;
+  }
+
+  .rebelPathsStepLeft,
+  .rebelPathsHint {
+    color: @theme-color-text-lighter;
+    font-size: 12px;
+  }
+
+  .rebelPathsLeftAfter {
+    border: 1px dashed @rebelPathsLeft;
+    color: @rebelPathsLeft;
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+}

@@ -1,0 +1,28 @@
+{
+    "name": "RebelPaths",
+    "description": "See the paths visitors take through your website: which pages they go to, step by step, and where they leave.",
+    "version": "5.0.0",
+    "theme": false,
+    "require": {
+        "matomo": ">=5.14.1-stable,<6.0.0-b1",
+        "php": ">=8.3.0"
+    },
+    "authors": [
+        {
+            "name": "Digitalist Open Cloud",
+            "email": "cloud@digitalist.com",
+            "homepage": "https:\/\/digitalist.cloud"
+        }
+    ],
+    "support": {
+        "issues": "https:\/\/github.com\/Digitalist-Open-Cloud\/RebelPaths\/issues"
+    },
+    "homepage": "https:\/\/digitalist.cloud",
+    "license": "GPL v3+",
+    "keywords": [
+        "paths",
+        "user flow",
+        "navigation",
+        "behaviour"
+    ]
+}

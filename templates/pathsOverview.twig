@@ -1,0 +1,48 @@
+<div class="rebelPaths" data-steps="{{ steps|json_encode }}" data-texts="{{ texts|json_encode }}" data-max-steps="{{ maxSteps }}">
+    <div class="rebelPathsSwitch">
+        <button type="button" class="rebelPathsBy active" data-by="urls">{{ 'RebelPaths_ByUrl'|translate }}</button>
+        <button type="button" class="rebelPathsBy" data-by="titles">{{ 'RebelPaths_ByTitle'|translate }}</button>
+    </div>
+
+    <h3>{{ 'RebelPaths_TopPaths'|translate }}</h3>
+    <p class="rebelPathsHelp">{{ 'RebelPaths_TopPathsHelp'|translate }}</p>
+    {% for by, view in views %}
+    <div class="rebelPathsTop" data-by="{{ by }}"{% if not loop.first %} hidden{% endif %}>
+        {% for path in view.top %}
+        <div class="rebelPathsPath">
+            <div class="rebelPathsChips">
+                {% for step in path.steps %}
+                <span class="rebelPathsChip">{{ step }}</span><span class="rebelPathsArrow" aria-hidden="true">→</span>
+                {% endfor %}
+                <span class="rebelPathsChip rebelPathsChipLeft">{{ 'RebelPaths_Left'|translate }}</span>
+            </div>
+            <div class="rebelPathsMeter">
+                <span class="rebelPathsMeterBar" style="width: {{ (100 * path.visits / view.max)|round(1) }}%"></span>
+            </div>
+            <div class="rebelPathsCount">{{ path.visits == 1 ? 'General_OneVisit'|translate : 'General_NVisits'|translate(path.visits|number) }}</div>
+        </div>
+        {% else %}
+        <p class="rebelPathsEmpty">{{ 'CoreHome_ThereIsNoDataForThisReport'|translate }}</p>
+        {% endfor %}
+    </div>
+    {% endfor %}
+
+    <h3 class="rebelPathsFlowTitle">{{ 'RebelPaths_Flow'|translate }}</h3>
+    <p class="rebelPathsHelp">{{ 'RebelPaths_FlowHelp'|translate }}</p>
+    <div class="rebelPathsLegend">
+        <span><i class="rebelPathsLegendOn"></i>{{ 'RebelPaths_LegendWentOn'|translate }}</span>
+        <span><i class="rebelPathsLegendLeft"></i>{{ 'RebelPaths_LegendLeft'|translate }}</span>
+    </div>
+    <div class="rebelPathsFlow"></div>
+
+    <h3>{{ 'RebelPaths_StepExplorer'|translate }}</h3>
+    <p class="rebelPathsHelp">{{ 'RebelPaths_StepExplorerHelp'|translate }}</p>
+    <div class="rebelPathsExplorer"></div>
+
+    <h3>{{ 'RebelPaths_AroundAPage'|translate }}</h3>
+    <p class="rebelPathsHelp">{{ 'RebelPaths_AroundAPageHelp'|translate }}</p>
+    <label class="rebelPathsAroundLabel">{{ 'RebelPaths_ThePage'|translate }}
+        <select class="rebelPathsAroundPage browser-default"></select>
+    </label>
+    <div class="rebelPathsAround"></div>
+</div>
