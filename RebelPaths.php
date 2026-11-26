@@ -21,6 +21,7 @@ class RebelPaths extends Plugin
             'AssetManager.getStylesheetFiles' => 'getStylesheetFiles',
             'AssetManager.getJavaScriptFiles' => 'getJavaScriptFiles',
             'Category.addSubcategories' => 'addSubcategories',
+            'Translate.getClientSideTranslationKeys' => 'getClientSideTranslationKeys',
             'Metrics.getDefaultMetricTranslations' => 'addMetricTranslations',
             'Metrics.getDefaultMetricDocumentationTranslations' => 'addMetricDocumentationTranslations',
         ];
@@ -35,6 +36,13 @@ class RebelPaths extends Plugin
     public function getJavaScriptFiles(&$files)
     {
         $files[] = 'plugins/RebelPaths/javascripts/pathsPage.js';
+        $files[] = 'plugins/RebelPaths/javascripts/rowAction.js';
+    }
+
+    public function getClientSideTranslationKeys(&$translationKeys)
+    {
+        $translationKeys[] = 'RebelPaths_AroundAPage';
+        $translationKeys[] = 'RebelPaths_RowActionTooltip';
     }
 
     public function addSubcategories(&$subcategories)

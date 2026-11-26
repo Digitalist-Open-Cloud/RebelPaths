@@ -260,7 +260,7 @@ class PathsTest extends IntegrationTestCase
 
         $this->assertStringContainsString('This website has no goals yet.', (new GetToAGoal())->render());
         GoalsApi::getInstance()->addGoal(1, 'Signed up', 'url', '/done', 'contains');
-        $this->assertStringContainsString('<option value="1">Signed up</option>', (new GetToAGoal())->render());
+        $this->assertStringContainsString('<option value="goal:1">Signed up</option>', (new GetToAGoal())->render());
         $this->assertCount(5, PathsPage::PAGES);
     }
 
@@ -301,6 +301,15 @@ class PathsTest extends IntegrationTestCase
 
         $segmented = $this->around('/pricing', ['segment' => 'pageUrl=@' . urlencode('/signup')]);
         $this->assertSame([1, 0, 0], [$segmented['nb_visits'], $segmented['nb_entries'], $segmented['nb_exits']]);
+    }
+
+    public function testAPageCanBeAskedForByItsWholeAddress()
+    {
+        $this->trackFourVisits();
+
+        $around = $this->around('https://example.org/pricing');
+
+        $this->assertSame(['/pricing', 3], [$around['label'], $around['nb_visits']]);
     }
 
     public function testAPageThatWasNotViewedHasNothingAroundIt()

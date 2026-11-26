@@ -56,8 +56,14 @@ describe('RebelPaths', function () {
         expect(await paths()).to.include('Start → Pricing → Sign up → left: 1 visit');
     });
 
-    it('should draw the flow with a bar for each page of a step and a band for each move', async function () {
+    it('should keep the choice of page titles on the next page', async function () {
         await open('Flow', '.rebelPathsFlowNode');
+
+        expect(await page.evaluate(() => document.querySelector('.rebelPathsFlowNode title').textContent)).to.equal('Start: 3 visits, 0% left');
+        await page.click('.rebelPathsBy[data-by="urls"]');
+    });
+
+    it('should draw the flow with a bar for each page of a step and a band for each move', async function () {
 
         const flow = await page.evaluate(() => ({
             pages: [...document.querySelectorAll('.rebelPathsFlowNode')]
@@ -108,6 +114,7 @@ describe('RebelPaths', function () {
         await page.click('.rebelPathsBy[data-by="titles"]');
 
         expect((await columns('.rebelPathsExplorer'))[0]).to.deep.equal(['Start3', 'Pricing1']);
+        await page.click('.rebelPathsBy[data-by="urls"]');
     });
 
     it('should show what visits viewed before and after a page that is picked', async function () {
@@ -147,5 +154,28 @@ describe('RebelPaths', function () {
             '/pricing | Visits: 3. Converted: 33%. Left here: 67%.',
             '/signup | Visits: 1. Converted: 100%. Left here: 0%.',
         ]);
+    });
+
+    it('should look around a page of the goal page when it is clicked, by title when that was chosen', async function () {
+        await page.click('.rebelPathsBy[data-by="titles"]');
+        await page.waitForFunction(() => document.querySelector('.rebelPathsToGoal .rebelPathsStepLabel')?.textContent === 'Start');
+        await page.click('.rebelPathsToGoal .rebelPathsColumn:nth-child(3) .rebelPathsStepPick');
+        await page.waitForFunction(() => document.querySelector('.rebelPathsAround .rebelPathsAroundCentre')?.textContent.startsWith('Pricing'));
+
+        expect((await columns('.rebelPathsAround'))[1]).to.deep.equal(['Start2', '1 started here']);
+        await page.click('.rebelPathsBy[data-by="urls"]');
+    });
+
+    it('should open the page around a page from a row of the pages report', async function () {
+        await page.goto(`?module=CoreHome&action=index&${params}#?${params}&category=General_Actions&subcategory=General_Pages`);
+        await page.waitForSelector('.dataTable[data-report="Actions.getPageUrls"] tbody tr');
+        await page.waitForNetworkIdle();
+
+        const row = await page.jQuery('.dataTable[data-report="Actions.getPageUrls"] tbody tr:contains(pricing):first');
+        await row.hover();
+        await (await row.$('a.actionRebelPaths')).click();
+        await page.waitForFunction(() => document.querySelector('.rebelPathsAround .rebelPathsAroundCentre')?.textContent.startsWith('/pricing'));
+
+        expect((await columns('.rebelPathsAround'))[3]).to.deep.equal(['/signup1', '2 left here']);
     });
 });

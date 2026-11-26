@@ -92,9 +92,17 @@ abstract class PathsPage extends Widget
             $goals[GoalManager::IDGOAL_ORDER] = Piwik::translate('RebelPaths_EcommerceOrders');
         }
 
+        $funnels = [];
+        if (API::canUseFunnels()) {
+            foreach (ApiRequest::processRequest('RebelFunnels.getFunnels', ['idSite' => $idSite], []) as $funnel) {
+                $funnels[(int) $funnel['idfunnel']] = $funnel['name'];
+            }
+        }
+
         return $this->renderTemplate('pathsPage', [
             'page' => static::PAGE,
             'goals' => $goals,
+            'funnels' => $funnels,
             'views' => $views,
             'steps' => array_map(fn (array $view) => $view['steps'], $views),
             'maxSteps' => Paths::STEPS,
@@ -114,6 +122,10 @@ abstract class PathsPage extends Widget
                 'endedHere' => Piwik::translate('RebelPaths_EndedHere'),
                 'convertedOn' => Piwik::translate('RebelPaths_ConvertedOn'),
                 'converted' => Piwik::translate('RebelPaths_VisitsConverted'),
+                'completedOn' => Piwik::translate('RebelPaths_CompletedOn'),
+                'completed' => Piwik::translate('RebelPaths_VisitsCompleted'),
+                'goal' => Piwik::translate('General_Goal'),
+                'funnel' => Piwik::translate('RebelPaths_Funnel'),
                 'onTheWay' => Piwik::translate('RebelPaths_OnTheWayRow'),
                 'threeBefore' => Piwik::translate('RebelPaths_ThreeStepsBefore'),
                 'around' => [

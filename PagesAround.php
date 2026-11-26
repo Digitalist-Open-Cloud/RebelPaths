@@ -11,12 +11,14 @@ namespace Piwik\Plugins\RebelPaths;
 
 use Piwik\ArchiveProcessor\Parameters;
 use Piwik\Common;
+use Piwik\Container\StaticContainer;
 use Piwik\DataAccess\LogAggregator;
 use Piwik\Db;
 use Piwik\Period;
 use Piwik\Period\Factory as PeriodFactory;
 use Piwik\Plugins\RebelPaths\RecordBuilders\Paths;
 use Piwik\Segment;
+use Piwik\Segment\SegmentExpression;
 use Piwik\Site;
 use Piwik\Tracker\Action;
 
@@ -42,6 +44,7 @@ class PagesAround
     private LogAggregator $logAggregator;
     private bool $byUrl;
     private string $host;
+    private string $segment;
 
     // Narrows a query to the visits of the segment, as SQL to add to a condition, and what it binds.
     private string $visitsSql = '';
@@ -53,6 +56,7 @@ class PagesAround
         $this->range = PeriodFactory::build($period, $date);
         $this->logAggregator = new LogAggregator(new Parameters($this->site, $this->range, new Segment('', [$idSite])));
         $this->byUrl = $byUrl;
+        $this->segment = $segment;
         $this->host = Paths::getHost($this->site->getMainUrl());
 
         // A segment on pages would leave only the page views it matches, so it picks the visits instead.
@@ -76,6 +80,8 @@ class PagesAround
         if (!$ids) {
             return $result;
         }
+        // A page that was asked for by its whole address is named as the paths show it.
+        $result['label'] = Paths::fetchLabels($this->logAggregator->getDb(), [$ids[0]], $this->byUrl, $this->host)[$ids[0]];
 
         $actions = self::ACTIONS;
         $arrivals = $this->logAggregator->generateQuery(
@@ -120,6 +126,54 @@ class PagesAround
             'bind' => $conversions['bind'],
         ];
 
+        return $this->before($arrivals, $conversions);
+    }
+
+    /**
+     * As getForGoal, for the visits that completed a funnel of RebelFunnels. A visit that reached
+     * the last step without an action, as with a form, is left out.
+     *
+     * @param array{steps: array[], segment_filter: string} $funnel
+     * @return array<string, mixed>
+     */
+    public function getForFunnel(array $funnel): array
+    {
+        $segment = Segment::combine($this->segment, SegmentExpression::AND_DELIMITER, $funnel['segment_filter']);
+        $logAggregator = new LogAggregator(new Parameters($this->site, $this->range, new Segment($segment, [$this->site->getId()], $this->range->getDateTimeStart(), $this->range->getDateTimeEnd())));
+        // Lets the segment pick visits: a segment on pages would otherwise leave only the page views it matches.
+        $logAggregator->allowUsageSegmentCache();
+        $completions = StaticContainer::get(API::FUNNEL_COUNTER)->getCompletions($logAggregator, $funnel['steps']);
+
+        // The visits are known here and not to the database, so they are put in a table for the
+        // queries. It is made on the connection those use.
+        $db = Db::getReader();
+        $table = Common::prefixTable('rebelpaths_tmp_arrivals');
+        $db->query("CREATE TEMPORARY TABLE IF NOT EXISTS $table (idvisit BIGINT UNSIGNED NOT NULL PRIMARY KEY, position INT UNSIGNED NOT NULL)");
+
+        try {
+            $db->query("DELETE FROM $table");
+            foreach (array_chunk(array_filter(array_map('intval', array_column($completions, 1))), 1000) as $idActions) {
+                $db->query(
+                    "INSERT IGNORE INTO $table (idvisit, position)
+                     SELECT idvisit, pageview_position FROM " . Common::prefixTable(self::ACTIONS) . '
+                      WHERE idlink_va IN (' . implode(',', $idActions) . ') AND pageview_position IS NOT NULL'
+                );
+            }
+
+            // A query can name a temporary table once, which each of the queries does.
+            return $this->before(['sql' => "SELECT idvisit, position FROM $table", 'bind' => []], ['sql' => "SELECT idvisit FROM $table", 'bind' => []]);
+        } finally {
+            $db->query("DROP TEMPORARY TABLE IF EXISTS $table");
+        }
+    }
+
+    /**
+     * @param array{sql: string, bind: array} $arrivals the visits with the position they converted at
+     * @param array{sql: string, bind: array} $conversions the visits that converted
+     * @return array<string, mixed>
+     */
+    private function before(array $arrivals, array $conversions): array
+    {
         $steps = $this->countSteps($arrivals, -self::STEPS_TO_GOAL, 0);
         $result = $this->countArrivals($arrivals, $steps);
         unset($result['nb_exits']);
@@ -293,7 +347,7 @@ class PagesAround
     }
 
     /**
-     * The pages that are shown with this label. Names are stored encoded for HTML.
+     * The pages that are shown with this label, or that have this address. Names are stored encoded for HTML.
      *
      * @return int[]
      */
@@ -301,7 +355,9 @@ class PagesAround
     {
         $label = Common::sanitizeInputValue($label);
         $names = [$label];
-        if ($this->byUrl && $this->host !== '' && str_starts_with($label, '/')) {
+        if ($this->byUrl && preg_match('~^https?://(?:www\.)?(.+)$~i', $label, $address)) {
+            $names = [$address[1], 'www.' . $address[1]];
+        } elseif ($this->byUrl && $this->host !== '' && str_starts_with($label, '/')) {
             $names = [$this->host . $label, 'www.' . $this->host . $label];
             if ($label === '/') {
                 array_push($names, $this->host, 'www.' . $this->host);

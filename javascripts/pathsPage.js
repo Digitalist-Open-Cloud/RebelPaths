@@ -203,6 +203,12 @@
             option.value = label;
             select.appendChild(option);
         });
+        // The page another page or report asked for is looked around first.
+        var asked = hashParameters()[PAGE_PARAMETER];
+        if (asked && !state.askedShown) {
+            state.askedShown = true;
+            selectPage(root, String(asked));
+        }
         loadAround(root, select.value);
     }
 
@@ -278,7 +284,28 @@
         box.appendChild(column);
     }
 
-    function lookAround(root, label) {
+    var REMEMBERED = 'rebelPathsBy';
+    var PAGE_PARAMETER = 'rebelPathsPage';
+
+    function hashParameters() {
+        var url = window.CoreHome && window.CoreHome.MatomoUrl;
+        return url ? url.hashParsed.value : {};
+    }
+
+    // Opens the page that looks around a page, for the page with this label or address.
+    window.rebelPathsLookAround = function (page) {
+        var parameters = {};
+        var current = hashParameters();
+        Object.keys(current).forEach(function (name) {
+            parameters[name] = current[name];
+        });
+        parameters.category = 'RebelPaths_Paths';
+        parameters.subcategory = 'RebelPaths_AroundAPage';
+        parameters[PAGE_PARAMETER] = page;
+        window.CoreHome.MatomoUrl.updateHash(parameters);
+    };
+
+    function selectPage(root, label) {
         var select = root.querySelector('.rebelPathsAroundPage');
         if (![].some.call(select.options, function (option) { return option.value === label; })) {
             var option = el('option', '', label);
@@ -286,6 +313,10 @@
             select.appendChild(option);
         }
         select.value = label;
+    }
+
+    function lookAround(root, label) {
+        selectPage(root, label);
         loadAround(root, label);
     }
 
@@ -294,6 +325,9 @@
         var box = root.querySelector('.rebelPathsAround');
         var pick = function (label) { lookAround(root, label); };
         box.textContent = '';
+        // A page that was asked for by its address comes back with its label.
+        selectPage(root, around.label);
+        root.rebelPaths.around = around.label;
 
         pageColumn(box, texts.around['-2'], around.steps['-2'], around.nb_visits, texts, pick);
         var before = pageColumn(box, texts.around['-1'], around.steps['-1'], around.nb_visits, texts, pick);
@@ -315,6 +349,8 @@
             return;
         }
         var box = root.querySelector('.rebelPathsToGoal');
+        var picked = select.value.split(':');
+        var isFunnel = picked[0] === 'funnel';
         var idGoal = select.value;
         var by = state.by;
         box.textContent = '';
@@ -323,21 +359,22 @@
 
         state.goal = idGoal;
         var ajax = new window.ajaxHelper();
-        ajax.addParams({ module: 'API', method: 'RebelPaths.getPagesBeforeGoal', format: 'json', idGoal: idGoal, byTitle: by === 'titles' ? 1 : 0 }, 'get');
+        var parameters = { module: 'API', method: isFunnel ? 'RebelPaths.getPagesBeforeFunnel' : 'RebelPaths.getPagesBeforeGoal', format: 'json', byTitle: by === 'titles' ? 1 : 0 };
+        parameters[isFunnel ? 'idFunnel' : 'idGoal'] = picked[1];
+        ajax.addParams(parameters, 'get');
         ajax.setFormat('json');
         ajax.setCallback(function (before) {
             if (state.goal === idGoal && state.by === by && before && before.steps) {
-                drawGoal(root, before, select.options[select.selectedIndex].textContent);
+                drawGoal(root, before, select.options[select.selectedIndex].textContent, isFunnel);
             }
         });
         ajax.send();
     }
 
-    function drawGoal(root, before, goalName) {
+    function drawGoal(root, before, goalName, isFunnel) {
         var texts = root.rebelPaths.texts;
         var box = root.querySelector('.rebelPathsToGoal');
-        // The page to look around a page is another one, so the pages here are not picked.
-        var pick = null;
+        var pick = window.rebelPathsLookAround;
         box.textContent = '';
         if (!before.nb_visits) {
             box.appendChild(el('p', 'rebelPathsHint', texts.noData));
@@ -350,8 +387,8 @@
         if (before.nb_entries > 0) {
             last.appendChild(el('div', 'rebelPathsStartedHere', texts.startedHere.replace('%s', number(before.nb_entries))));
         }
-        pageColumn(box, texts.convertedOn, before.steps['0'], before.nb_visits, texts, pick);
-        centreColumn(box, root.querySelector('.rebelPathsGoal').previousSibling.textContent.trim(), goalName, before.nb_visits, texts.converted);
+        pageColumn(box, isFunnel ? texts.completedOn : texts.convertedOn, before.steps['0'], before.nb_visits, texts, pick);
+        centreColumn(box, isFunnel ? texts.funnel : texts.goal, goalName, before.nb_visits, isFunnel ? texts.completed : texts.converted);
 
         var way = root.querySelector('.rebelPathsOnTheWay');
         before.pages.forEach(function (page) {
@@ -464,6 +501,23 @@
             by: 'urls',
             picked: [0],
         };
+        function showBy(by) {
+            root.rebelPaths.by = by;
+            root.querySelectorAll('.rebelPathsBy').forEach(function (button) {
+                button.classList.toggle('active', button.getAttribute('data-by') === by);
+            });
+            root.querySelectorAll('.rebelPathsTop').forEach(function (top) {
+                top.hidden = top.getAttribute('data-by') !== by;
+            });
+        }
+        // The choice between addresses and titles is kept from one page to the next.
+        try {
+            if (window.sessionStorage.getItem(REMEMBERED) === 'titles') {
+                showBy('titles');
+            }
+        } catch (e) {
+            // No storage in this browser.
+        }
 
         // A page has one of the views, so each is drawn where its box is there.
         function drawAll() {
@@ -482,14 +536,13 @@
         root.querySelectorAll('.rebelPathsBy').forEach(function (button) {
             button.addEventListener('click', function () {
                 var by = button.getAttribute('data-by');
-                root.rebelPaths.by = by;
+                showBy(by);
                 root.rebelPaths.picked = [0];
-                root.querySelectorAll('.rebelPathsBy').forEach(function (other) {
-                    other.classList.toggle('active', other === button);
-                });
-                root.querySelectorAll('.rebelPathsTop').forEach(function (top) {
-                    top.hidden = top.getAttribute('data-by') !== by;
-                });
+                try {
+                    window.sessionStorage.setItem(REMEMBERED, by);
+                } catch (e) {
+                    // No storage in this browser.
+                }
                 drawAll();
             });
         });

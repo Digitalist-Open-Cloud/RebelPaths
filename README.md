@@ -43,6 +43,16 @@ address of a page or by its title.
   without converting, and the rest, who went on without converting. Like "Around a page" it is
   read from the logs when you pick.
 
+  With the plugin RebelFunnels active, a funnel can be picked instead of a goal. It then counts
+  the visits that completed the funnel, from the action they reached its last step with. A visit
+  that reached the last step without an action, as with a form step, is left out.
+
+The choice between address and title is kept while you move between the pages.
+
+A row of Matomo's reports of page URLs, entry pages and exit pages has an action with the Paths
+icon. It opens "Around a page" for the page of that row. A page in the columns of "On the way to
+a goal" does the same.
+
 How it counts:
 
 - A segment narrows the paths to its visits, for example visits from a campaign or visits that
@@ -67,7 +77,8 @@ steps under each row. They take `idSite`, `period`, `date`, `segment`, `expanded
 (`nb_visits`) and those that left there (`nb_path_exits`).
 
 `RebelPaths.getPagesAroundPage` takes `idSite`, `period`, `date`, `page`, `byTitle` and `segment`.
-`page` is the page as the paths show it, such as `/pricing`, or its title with `byTitle=1`. It
+`page` is the page as the paths show it, such as `/pricing`, its whole address, or its title with
+`byTitle=1`. It
 returns the visits that came to the page, how many started and left there, and the pages of the
 steps -2, -1, 1 and 2.
 
@@ -75,6 +86,9 @@ steps -2, -1, 1 and 2.
 `segment`; `idGoal=0` is ecommerce orders. It returns the visits that converted, the pages of the
 steps -3 to 0, where 0 is the page they converted on, and under `pages` the visits, conversions
 and exits of the pages on the way.
+
+`RebelPaths.getPagesBeforeFunnel` is the same for a funnel of RebelFunnels, with `idFunnel` in
+place of `idGoal`.
 
 ## Development
 
