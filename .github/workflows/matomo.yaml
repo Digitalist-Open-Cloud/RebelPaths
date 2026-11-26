@@ -22,6 +22,7 @@ jobs:
         uses: Digitalist-Open-Cloud/Matomo-github-action-tests@main
         with:
           plugin-name: 'RebelPaths'
+          setup-script: 'tests/ci/other-plugins.sh'
           php-version: ${{ matrix.php }}
           test-type: 'PluginTests'
           matomo-test-branch: ${{ matrix.target }}

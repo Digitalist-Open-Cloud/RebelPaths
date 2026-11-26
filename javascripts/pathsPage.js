@@ -5,8 +5,8 @@
  * @license https://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
-// The page of the paths: switches between addresses and titles, draws the flow and the step
-// explorer, and loads what is around a page.
+// The pages of the paths: switches between addresses and titles, draws the flow and the step
+// explorer, and loads what is around a page and before a goal.
 (function () {
     function el(tag, className, text) {
         var element = document.createElement(tag);
@@ -110,7 +110,7 @@
         var height = FLOW_TOP + Math.max.apply(null, flow.columns.map(function (nodes) {
             return total(nodes) * scale + nodes.length * FLOW_GAP;
         }));
-        var chart = svg('svg', { viewBox: '0 0 ' + FLOW_WIDTH + ' ' + height, role: 'img', 'aria-label': root.querySelector('.rebelPathsFlowTitle').textContent });
+        var chart = svg('svg', { viewBox: '0 0 ' + FLOW_WIDTH + ' ' + height, role: 'img', 'aria-label': texts.flow });
         var linkLayer = chart.appendChild(svg('g', {}));
         var nodeLayer = chart.appendChild(svg('g', {}));
         var apart = flow.columns.length > 1 ? (FLOW_WIDTH - FLOW_LABEL - FLOW_NODE) / (flow.columns.length - 1) : 0;
@@ -203,6 +203,12 @@
             option.value = label;
             select.appendChild(option);
         });
+        // The page another page or report asked for is looked around first.
+        var asked = hashParameters()[PAGE_PARAMETER];
+        if (asked && !state.askedShown) {
+            state.askedShown = true;
+            selectPage(root, String(asked));
+        }
         loadAround(root, select.value);
     }
 
@@ -230,66 +236,176 @@
         ajax.send();
     }
 
+    // A column of pages with their visits and a bar for their share of the total. Picking a page calls onPick.
+    function pageColumn(box, title, pages, total, texts, onPick) {
+        var column = el('div', 'rebelPathsColumn');
+        column.appendChild(el('div', 'rebelPathsColumnTitle', title));
+        box.appendChild(column);
+
+        (pages || []).forEach(function (other) {
+            var item = el('div', 'rebelPathsStep');
+            var row = el('span', 'rebelPathsStepRow');
+            row.appendChild(el('span', 'rebelPathsStepLabel', other.label === '' ? texts.others : other.label));
+            row.appendChild(el('span', 'rebelPathsStepVisits', number(other.nb_visits)));
+            item.appendChild(row);
+            var bar = el('span', 'rebelPathsStepBar rebelPathsAroundBar');
+            var on = el('span', 'rebelPathsStepBarOn');
+            on.style.width = (100 * other.nb_visits / total) + '%';
+            bar.appendChild(on);
+            item.appendChild(bar);
+            if (onPick && other.label !== '' && other.label !== texts.search) {
+                item.className += ' rebelPathsStepPick';
+                item.setAttribute('role', 'button');
+                item.setAttribute('tabindex', '0');
+                var pick = function (event) {
+                    if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') {
+                        return;
+                    }
+                    event.preventDefault();
+                    onPick(other.label);
+                };
+                item.addEventListener('click', pick);
+                item.addEventListener('keydown', pick);
+            }
+            column.appendChild(item);
+        });
+
+        return column;
+    }
+
+    function centreColumn(box, title, label, visits, caption) {
+        var column = el('div', 'rebelPathsColumn');
+        column.appendChild(el('div', 'rebelPathsColumnTitle', title));
+        var page = el('div', 'rebelPathsStep rebelPathsAroundCentre');
+        page.appendChild(el('span', 'rebelPathsStepLabel', label));
+        page.appendChild(el('span', 'rebelPathsAroundVisits', number(visits)));
+        page.appendChild(el('span', 'rebelPathsStepLeft', caption));
+        column.appendChild(page);
+        box.appendChild(column);
+    }
+
+    var REMEMBERED = 'rebelPathsBy';
+    var PAGE_PARAMETER = 'rebelPathsPage';
+
+    function hashParameters() {
+        var url = window.CoreHome && window.CoreHome.MatomoUrl;
+        return url ? url.hashParsed.value : {};
+    }
+
+    // Opens the page that looks around a page, for the page with this label or address.
+    window.rebelPathsLookAround = function (page) {
+        var parameters = {};
+        var current = hashParameters();
+        Object.keys(current).forEach(function (name) {
+            parameters[name] = current[name];
+        });
+        parameters.category = 'RebelPaths_Paths';
+        parameters.subcategory = 'RebelPaths_AroundAPage';
+        parameters[PAGE_PARAMETER] = page;
+        window.CoreHome.MatomoUrl.updateHash(parameters);
+    };
+
+    function selectPage(root, label) {
+        var select = root.querySelector('.rebelPathsAroundPage');
+        if (![].some.call(select.options, function (option) { return option.value === label; })) {
+            var option = el('option', '', label);
+            option.value = label;
+            select.appendChild(option);
+        }
+        select.value = label;
+    }
+
+    function lookAround(root, label) {
+        selectPage(root, label);
+        loadAround(root, label);
+    }
+
     function drawAround(root, around) {
         var texts = root.rebelPaths.texts;
         var box = root.querySelector('.rebelPathsAround');
+        var pick = function (label) { lookAround(root, label); };
         box.textContent = '';
+        // A page that was asked for by its address comes back with its label.
+        selectPage(root, around.label);
+        root.rebelPaths.around = around.label;
 
-        [-2, -1, 0, 1, 2].forEach(function (step) {
-            var column = el('div', 'rebelPathsColumn');
-            box.appendChild(column);
-            if (step === 0) {
-                column.appendChild(el('div', 'rebelPathsColumnTitle', texts.thePage));
-                var page = el('div', 'rebelPathsStep rebelPathsAroundCentre');
-                page.appendChild(el('span', 'rebelPathsStepLabel', around.label));
-                page.appendChild(el('span', 'rebelPathsAroundVisits', number(around.nb_visits)));
-                page.appendChild(el('span', 'rebelPathsStepLeft', texts.visits));
-                column.appendChild(page);
-                return;
+        pageColumn(box, texts.around['-2'], around.steps['-2'], around.nb_visits, texts, pick);
+        var before = pageColumn(box, texts.around['-1'], around.steps['-1'], around.nb_visits, texts, pick);
+        if (around.nb_entries > 0) {
+            before.appendChild(el('div', 'rebelPathsStartedHere', texts.startedHere.replace('%s', number(around.nb_entries))));
+        }
+        centreColumn(box, texts.thePage, around.label, around.nb_visits, texts.visits);
+        var after = pageColumn(box, texts.around['1'], around.steps['1'], around.nb_visits, texts, pick);
+        if (around.nb_exits > 0) {
+            after.appendChild(el('div', 'rebelPathsLeftAfter', texts.endedHere.replace('%s', number(around.nb_exits))));
+        }
+        pageColumn(box, texts.around['2'], around.steps['2'], around.nb_visits, texts, pick);
+    }
+
+    function loadGoal(root) {
+        var state = root.rebelPaths;
+        var select = root.querySelector('.rebelPathsGoal');
+        if (!select) {
+            return;
+        }
+        var box = root.querySelector('.rebelPathsToGoal');
+        var picked = select.value.split(':');
+        var isFunnel = picked[0] === 'funnel';
+        var idGoal = select.value;
+        var by = state.by;
+        box.textContent = '';
+        root.querySelector('.rebelPathsOnTheWay').textContent = '';
+        box.appendChild(el('p', 'rebelPathsHint', state.texts.loading));
+
+        state.goal = idGoal;
+        var ajax = new window.ajaxHelper();
+        var parameters = { module: 'API', method: isFunnel ? 'RebelPaths.getPagesBeforeFunnel' : 'RebelPaths.getPagesBeforeGoal', format: 'json', byTitle: by === 'titles' ? 1 : 0 };
+        parameters[isFunnel ? 'idFunnel' : 'idGoal'] = picked[1];
+        ajax.addParams(parameters, 'get');
+        ajax.setFormat('json');
+        ajax.setCallback(function (before) {
+            if (state.goal === idGoal && state.by === by && before && before.steps) {
+                drawGoal(root, before, select.options[select.selectedIndex].textContent, isFunnel);
             }
+        });
+        ajax.send();
+    }
 
-            column.appendChild(el('div', 'rebelPathsColumnTitle', texts.around[String(step)]));
-            (around.steps[step] || []).forEach(function (other) {
-                var item = el('div', 'rebelPathsStep');
-                var row = el('span', 'rebelPathsStepRow');
-                row.appendChild(el('span', 'rebelPathsStepLabel', other.label === '' ? texts.others : other.label));
-                row.appendChild(el('span', 'rebelPathsStepVisits', number(other.nb_visits)));
-                item.appendChild(row);
-                var bar = el('span', 'rebelPathsStepBar rebelPathsAroundBar');
-                var on = el('span', 'rebelPathsStepBarOn');
-                on.style.width = (100 * other.nb_visits / around.nb_visits) + '%';
-                bar.appendChild(on);
-                item.appendChild(bar);
-                if (other.label !== '' && other.label !== texts.search) {
-                    item.className += ' rebelPathsStepPick';
-                    item.setAttribute('role', 'button');
-                    item.setAttribute('tabindex', '0');
-                    var pick = function (event) {
-                        if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') {
-                            return;
-                        }
-                        event.preventDefault();
-                        var select = root.querySelector('.rebelPathsAroundPage');
-                        if (![].some.call(select.options, function (option) { return option.value === other.label; })) {
-                            var option = el('option', '', other.label);
-                            option.value = other.label;
-                            select.appendChild(option);
-                        }
-                        select.value = other.label;
-                        loadAround(root, other.label);
-                    };
-                    item.addEventListener('click', pick);
-                    item.addEventListener('keydown', pick);
-                }
-                column.appendChild(item);
+    function drawGoal(root, before, goalName, isFunnel) {
+        var texts = root.rebelPaths.texts;
+        var box = root.querySelector('.rebelPathsToGoal');
+        var pick = window.rebelPathsLookAround;
+        box.textContent = '';
+        if (!before.nb_visits) {
+            box.appendChild(el('p', 'rebelPathsHint', texts.noData));
+            return;
+        }
+
+        pageColumn(box, texts.threeBefore, before.steps['-3'], before.nb_visits, texts, pick);
+        pageColumn(box, texts.around['-2'], before.steps['-2'], before.nb_visits, texts, pick);
+        var last = pageColumn(box, texts.around['-1'], before.steps['-1'], before.nb_visits, texts, pick);
+        if (before.nb_entries > 0) {
+            last.appendChild(el('div', 'rebelPathsStartedHere', texts.startedHere.replace('%s', number(before.nb_entries))));
+        }
+        pageColumn(box, isFunnel ? texts.completedOn : texts.convertedOn, before.steps['0'], before.nb_visits, texts, pick);
+        centreColumn(box, isFunnel ? texts.funnel : texts.goal, goalName, before.nb_visits, isFunnel ? texts.completed : texts.converted);
+
+        var way = root.querySelector('.rebelPathsOnTheWay');
+        before.pages.forEach(function (page) {
+            var row = el('div', 'rebelPathsWay');
+            row.appendChild(el('div', 'rebelPathsWayLabel', page.label));
+            var bar = el('div', 'rebelPathsWayBar');
+            [['rebelPathsWayConverted', page.nb_converted], ['rebelPathsWayLeft', page.nb_exits]].forEach(function (part) {
+                var segment = el('span', part[0]);
+                segment.style.width = (100 * part[1] / page.nb_visits) + '%';
+                bar.appendChild(segment);
             });
-
-            if (step === -1 && around.nb_entries > 0) {
-                column.appendChild(el('div', 'rebelPathsStartedHere', texts.startedHere.replace('%s', number(around.nb_entries))));
-            }
-            if (step === 1 && around.nb_exits > 0) {
-                column.appendChild(el('div', 'rebelPathsLeftAfter', texts.endedHere.replace('%s', number(around.nb_exits))));
-            }
+            row.appendChild(bar);
+            row.appendChild(el('div', 'rebelPathsWayNumbers', texts.onTheWay
+                .replace('%1$s', number(page.nb_visits))
+                .replace('%2$s', Math.round(100 * page.nb_converted / page.nb_visits) + '%')
+                .replace('%3$s', Math.round(100 * page.nb_exits / page.nb_visits) + '%')));
+            way.appendChild(row);
         });
     }
 
@@ -385,30 +501,63 @@
             by: 'urls',
             picked: [0],
         };
+        function showBy(by) {
+            root.rebelPaths.by = by;
+            root.querySelectorAll('.rebelPathsBy').forEach(function (button) {
+                button.classList.toggle('active', button.getAttribute('data-by') === by);
+            });
+            root.querySelectorAll('.rebelPathsTop').forEach(function (top) {
+                top.hidden = top.getAttribute('data-by') !== by;
+            });
+        }
+        // The choice between addresses and titles is kept from one page to the next.
+        try {
+            if (window.sessionStorage.getItem(REMEMBERED) === 'titles') {
+                showBy('titles');
+            }
+        } catch (e) {
+            // No storage in this browser.
+        }
+
+        // A page has one of the views, so each is drawn where its box is there.
+        function drawAll() {
+            if (root.querySelector('.rebelPathsExplorer')) {
+                draw(root);
+            }
+            if (root.querySelector('.rebelPathsFlow')) {
+                drawFlow(root);
+            }
+            if (root.querySelector('.rebelPathsAroundPage')) {
+                fillPages(root);
+            }
+            loadGoal(root);
+        }
 
         root.querySelectorAll('.rebelPathsBy').forEach(function (button) {
             button.addEventListener('click', function () {
                 var by = button.getAttribute('data-by');
-                root.rebelPaths.by = by;
+                showBy(by);
                 root.rebelPaths.picked = [0];
-                root.querySelectorAll('.rebelPathsBy').forEach(function (other) {
-                    other.classList.toggle('active', other === button);
-                });
-                root.querySelectorAll('.rebelPathsTop').forEach(function (top) {
-                    top.hidden = top.getAttribute('data-by') !== by;
-                });
-                draw(root);
-                drawFlow(root);
-                fillPages(root);
+                try {
+                    window.sessionStorage.setItem(REMEMBERED, by);
+                } catch (e) {
+                    // No storage in this browser.
+                }
+                drawAll();
             });
         });
-        root.querySelector('.rebelPathsAroundPage').addEventListener('change', function (event) {
-            loadAround(root, event.target.value);
-        });
+        if (root.querySelector('.rebelPathsAroundPage')) {
+            root.querySelector('.rebelPathsAroundPage').addEventListener('change', function (event) {
+                loadAround(root, event.target.value);
+            });
+        }
+        if (root.querySelector('.rebelPathsGoal')) {
+            root.querySelector('.rebelPathsGoal').addEventListener('change', function () {
+                loadGoal(root);
+            });
+        }
 
-        draw(root);
-        drawFlow(root);
-        fillPages(root);
+        drawAll();
     }
 
     // Matomo puts the widget in the page after it has loaded, and again when the date changes.

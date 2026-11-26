@@ -4,7 +4,7 @@
         <button type="button" class="rebelPathsBy" data-by="titles">{{ 'RebelPaths_ByTitle'|translate }}</button>
     </div>
 
-    <h3>{{ 'RebelPaths_TopPaths'|translate }}</h3>
+    {% if page == 'RebelPaths_TopPaths' %}
     <p class="rebelPathsHelp">{{ 'RebelPaths_TopPathsHelp'|translate }}</p>
     {% for by, view in views %}
     <div class="rebelPathsTop" data-by="{{ by }}"{% if not loop.first %} hidden{% endif %}>
@@ -26,23 +26,59 @@
         {% endfor %}
     </div>
     {% endfor %}
-
-    <h3 class="rebelPathsFlowTitle">{{ 'RebelPaths_Flow'|translate }}</h3>
+    {% endif %}
+    {% if page == 'RebelPaths_Flow' %}
     <p class="rebelPathsHelp">{{ 'RebelPaths_FlowHelp'|translate }}</p>
     <div class="rebelPathsLegend">
         <span><i class="rebelPathsLegendOn"></i>{{ 'RebelPaths_LegendWentOn'|translate }}</span>
         <span><i class="rebelPathsLegendLeft"></i>{{ 'RebelPaths_LegendLeft'|translate }}</span>
     </div>
     <div class="rebelPathsFlow"></div>
-
-    <h3>{{ 'RebelPaths_StepExplorer'|translate }}</h3>
+    {% endif %}
+    {% if page == 'RebelPaths_StepExplorer' %}
     <p class="rebelPathsHelp">{{ 'RebelPaths_StepExplorerHelp'|translate }}</p>
+    <div class="rebelPathsLegend">
+        <span><i class="rebelPathsLegendOn"></i>{{ 'RebelPaths_LegendWentOn'|translate }}</span>
+        <span><i class="rebelPathsLegendLeft"></i>{{ 'RebelPaths_LegendLeft'|translate }}</span>
+    </div>
     <div class="rebelPathsExplorer"></div>
-
-    <h3>{{ 'RebelPaths_AroundAPage'|translate }}</h3>
+    {% endif %}
+    {% if page == 'RebelPaths_AroundAPage' %}
     <p class="rebelPathsHelp">{{ 'RebelPaths_AroundAPageHelp'|translate }}</p>
     <label class="rebelPathsAroundLabel">{{ 'RebelPaths_ThePage'|translate }}
         <select class="rebelPathsAroundPage browser-default"></select>
     </label>
     <div class="rebelPathsAround"></div>
+    {% endif %}
+    {% if page == 'RebelPaths_ToAGoal' %}
+    <p class="rebelPathsHelp">{{ 'RebelPaths_ToAGoalHelp'|translate }}</p>
+    {% if goals is empty and funnels is empty %}
+    <p class="rebelPathsHint">{{ 'RebelPaths_NoGoals'|translate }}</p>
+    {% else %}
+    <label class="rebelPathsAroundLabel">{{ (funnels is empty ? 'General_Goal' : 'RebelPaths_GoalOrFunnel')|translate }}
+        <select class="rebelPathsGoal browser-default">
+            {% if funnels is empty %}
+            {% for id, name in goals %}<option value="goal:{{ id }}">{{ name }}</option>{% endfor %}
+            {% else %}
+            <optgroup label="{{ 'Goals_Goals'|translate }}">
+                {% for id, name in goals %}<option value="goal:{{ id }}">{{ name }}</option>{% endfor %}
+            </optgroup>
+            <optgroup label="{{ 'RebelPaths_Funnels'|translate }}">
+                {% for id, name in funnels %}<option value="funnel:{{ id }}">{{ name }}</option>{% endfor %}
+            </optgroup>
+            {% endif %}
+        </select>
+    </label>
+    <div class="rebelPathsToGoal"></div>
+
+    <h4 class="rebelPathsOnTheWayTitle">{{ 'RebelPaths_OnTheWay'|translate }}</h4>
+    <p class="rebelPathsHelp">{{ 'RebelPaths_OnTheWayHelp'|translate }}</p>
+    <div class="rebelPathsLegend">
+        <span><i class="rebelPathsLegendOn"></i>{{ 'RebelPaths_LegendConverted'|translate }}</span>
+        <span><i class="rebelPathsLegendLeft"></i>{{ 'RebelPaths_LegendLeftWithout'|translate }}</span>
+        <span><i class="rebelPathsLegendElsewhere"></i>{{ 'RebelPaths_LegendElsewhere'|translate }}</span>
+    </div>
+    <div class="rebelPathsOnTheWay"></div>
+    {% endif %}
+    {% endif %}
 </div>

@@ -13,8 +13,14 @@ use Piwik\API\Request;
 use Piwik\DataTable;
 use Piwik\NoAccessException;
 use Piwik\Plugins\API\API as ApiApi;
+use Piwik\Plugins\Goals\API as GoalsApi;
 use Piwik\Plugins\RebelPaths\API;
-use Piwik\Plugins\RebelPaths\Widgets\GetPathsOverview;
+use Piwik\Plugins\RebelPaths\PathsPage;
+use Piwik\Plugins\RebelPaths\Widgets\GetAroundAPage;
+use Piwik\Plugins\RebelPaths\Widgets\GetFlow;
+use Piwik\Plugins\RebelPaths\Widgets\GetStepExplorer;
+use Piwik\Plugins\RebelPaths\Widgets\GetToAGoal;
+use Piwik\Plugins\RebelPaths\Widgets\GetTopPaths;
 use Piwik\Plugins\SitesManager\API as SitesManagerApi;
 use Piwik\Tests\Framework\Fixture;
 use Piwik\Tests\Framework\Mock\FakeAccess;
@@ -206,7 +212,7 @@ class PathsTest extends IntegrationTestCase
         $this->view($this->visit(['/<b>']), '/a&b');
         $_GET = ['idSite' => '1', 'period' => 'day', 'date' => self::DAY];
 
-        $page = (new GetPathsOverview())->render();
+        $page = (new GetTopPaths())->render();
 
         // The path most visits ended on comes first.
         $this->assertSame(1, preg_match('~rebelPathsChip">/</span>.*?rebelPathsChip">/pricing</span>.*?left</span>.*?2 visits~s', $page));
@@ -227,8 +233,35 @@ class PathsTest extends IntegrationTestCase
         FakeAccess::clearAccess(false, [], [2]);
         $_GET = ['idSite' => '1', 'period' => 'day', 'date' => self::DAY];
 
-        $this->expectException(NoAccessException::class);
-        (new GetPathsOverview())->render();
+        foreach ([GetTopPaths::class, GetFlow::class, GetStepExplorer::class, GetAroundAPage::class, GetToAGoal::class] as $page) {
+            try {
+                (new $page())->render();
+                $this->fail($page . ' was shown.');
+            } catch (NoAccessException $e) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function testEachPageShowsItsOwnView()
+    {
+        $this->trackFourVisits();
+        $_GET = ['idSite' => '1', 'period' => 'day', 'date' => self::DAY];
+        $boxes = ['rebelPathsTop', 'rebelPathsFlow', 'rebelPathsExplorer', 'rebelPathsAround', 'rebelPathsToGoal'];
+        $pages = [GetTopPaths::class, GetFlow::class, GetStepExplorer::class, GetAroundAPage::class];
+
+        foreach ($pages as $index => $page) {
+            $html = (new $page())->render();
+            foreach ($boxes as $boxIndex => $box) {
+                $this->assertSame($boxIndex === $index, strpos($html, 'class="' . $box . '"') !== false, "$page and $box");
+            }
+            $this->assertSame(0, preg_match('/RebelPaths_[A-Z]/', $html));
+        }
+
+        $this->assertStringContainsString('This website has no goals yet.', (new GetToAGoal())->render());
+        GoalsApi::getInstance()->addGoal(1, 'Signed up', 'url', '/done', 'contains');
+        $this->assertStringContainsString('<option value="goal:1">Signed up</option>', (new GetToAGoal())->render());
+        $this->assertCount(5, PathsPage::PAGES);
     }
 
     public function testThePagesBeforeAndAfterAPageAreCounted()
@@ -270,12 +303,74 @@ class PathsTest extends IntegrationTestCase
         $this->assertSame([1, 0, 0], [$segmented['nb_visits'], $segmented['nb_entries'], $segmented['nb_exits']]);
     }
 
+    public function testAPageCanBeAskedForByItsWholeAddress()
+    {
+        $this->trackFourVisits();
+
+        $around = $this->around('https://example.org/pricing');
+
+        $this->assertSame(['/pricing', 3], [$around['label'], $around['nb_visits']]);
+    }
+
     public function testAPageThatWasNotViewedHasNothingAroundIt()
     {
         $this->trackFourVisits();
 
         $this->assertSame(0, $this->around("/nothing' OR 1")['nb_visits']);
         $this->assertSame(0, $this->around('/pricing', ['idSite' => 2])['nb_visits']);
+    }
+
+    public function testTheStepsBeforeAConversionAndHowVisitsToThosePagesEndedAreCounted()
+    {
+        $idGoal = GoalsApi::getInstance()->addGoal(1, 'Signed up', 'url', '/done', 'contains');
+        $this->visit(['/', '/pricing', '/signup?plan=a', '/done', '/about']);
+        $this->visit(['/blog', '/', '/pricing', '/signup?plan=a', '/done']);
+        $this->visit(['/pricing', '/done']);
+        $this->visit(['/', '/pricing']);
+        $this->visit(['/', '/pricing', '/about']);
+        $this->visit(['/', '/about']);
+
+        $before = $this->beforeGoal($idGoal);
+
+        $this->assertSame([3, 0], [$before['nb_visits'], $before['nb_entries']]);
+        $this->assertEquals([
+            -3 => [['label' => '/', 'nb_visits' => 2]],
+            -2 => [['label' => '/pricing', 'nb_visits' => 2]],
+            -1 => [['label' => '/signup?plan=a', 'nb_visits' => 2], ['label' => '/pricing', 'nb_visits' => 1]],
+            0 => [['label' => '/done', 'nb_visits' => 3]],
+        ], $before['steps']);
+
+        $pages = array_column($before['pages'], null, 'label');
+        // Viewed by five visits: three converted after it, one left on it and one went on to another page.
+        $this->assertSame(['label' => '/pricing', 'nb_visits' => 5, 'nb_converted' => 3, 'nb_exits' => 1], $pages['/pricing']);
+        $this->assertSame(['label' => '/', 'nb_visits' => 5, 'nb_converted' => 2, 'nb_exits' => 0], $pages['/']);
+        $this->assertSame(['label' => '/done', 'nb_visits' => 3, 'nb_converted' => 3, 'nb_exits' => 0], $pages['/done']);
+        $this->assertArrayNotHasKey('/about', $pages);
+    }
+
+    public function testTheStepsBeforeAConversionCanBeReadByTitleAndForASegment()
+    {
+        $idGoal = GoalsApi::getInstance()->addGoal(1, 'Signed up', 'url', '/done', 'contains');
+        $this->visit(['/', '/pricing', '/done']);
+        $this->visit(['/about', '/done']);
+
+        $byTitle = $this->beforeGoal($idGoal, ['byTitle' => 1]);
+        $this->assertSame(2, $byTitle['nb_visits']);
+        $this->assertEquals([['label' => 'Pricing', 'nb_visits' => 1], ['label' => 'About', 'nb_visits' => 1]], $byTitle['steps'][-1]);
+
+        $segmented = $this->beforeGoal($idGoal, ['segment' => 'pageUrl=@' . urlencode('/about')]);
+        $this->assertSame(1, $segmented['nb_visits']);
+        $this->assertSame([['label' => '/about', 'nb_visits' => 1]], $segmented['steps'][-1]);
+    }
+
+    public function testAGoalWithoutConversionsHasNothingBeforeIt()
+    {
+        $idGoal = GoalsApi::getInstance()->addGoal(1, 'Signed up', 'url', '/done', 'contains');
+        $this->trackFourVisits();
+
+        $before = $this->beforeGoal($idGoal);
+
+        $this->assertSame([0, []], [$before['nb_visits'], $before['pages']]);
     }
 
     public function testAWebsiteHasOnlyItsOwnPaths()
@@ -290,9 +385,9 @@ class PathsTest extends IntegrationTestCase
         $this->trackFourVisits();
         FakeAccess::clearAccess(false, [], [2]);
 
-        foreach (['getPaths', 'getPathsByTitle', 'getPagesAroundPage'] as $method) {
+        foreach (['getPaths' => '', 'getPathsByTitle' => '', 'getPagesAroundPage' => '/pricing', 'getPagesBeforeGoal' => 1] as $method => $what) {
             try {
-                API::getInstance()->$method(1, 'day', self::DAY, '/pricing');
+                API::getInstance()->$method(1, 'day', self::DAY, $what);
                 $this->fail($method . ' was allowed.');
             } catch (NoAccessException $e) {
                 $this->addToAssertionCount(1);
@@ -308,7 +403,7 @@ class PathsTest extends IntegrationTestCase
         $this->visit(['/pricing']);
     }
 
-    private const TITLES = ['/' => 'Start', '/pricing' => 'Pricing', '/signup?plan=a' => 'Sign up', '/about' => 'About'];
+    private const TITLES = ['/' => 'Start', '/pricing' => 'Pricing', '/signup?plan=a' => 'Sign up', '/about' => 'About', '/done' => 'Done'];
 
     /**
      * A visit that views the given pages, a minute apart.
@@ -340,6 +435,11 @@ class PathsTest extends IntegrationTestCase
     private function report(string $method, array $extra = []): DataTable
     {
         return Request::processRequest('RebelPaths.' . $method, $extra + ['idSite' => 1, 'period' => 'day', 'date' => self::DAY, 'format_metrics' => 0]);
+    }
+
+    private function beforeGoal(int $idGoal, array $extra = []): array
+    {
+        return Request::processRequest('RebelPaths.getPagesBeforeGoal', $extra + ['idSite' => 1, 'period' => 'day', 'date' => self::DAY, 'idGoal' => $idGoal]);
     }
 
     private function around(string $page, array $extra = []): array

@@ -9,6 +9,7 @@
 
 namespace Piwik\Plugins\RebelPaths\tests\Fixtures;
 
+use Piwik\Plugins\Goals\API as GoalsApi;
 use Piwik\Tests\Framework\Fixture;
 
 /**
@@ -25,6 +26,10 @@ class SiteWithPaths extends Fixture
     {
         if (!self::siteCreated(1)) {
             self::createWebsite('2024-01-01 00:00:00', 0, 'Paths', 'http://example.org');
+        }
+
+        if (!GoalsApi::getInstance()->getGoals(1)) {
+            GoalsApi::getInstance()->addGoal(1, 'Signed up', 'url', '/signup', 'contains');
         }
 
         $this->visit(1, ['/', '/pricing', '/signup']);

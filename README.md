@@ -18,9 +18,10 @@ archives; to fill them for days that are archived already, run:
 ./console core:archive
 ```
 
-## The page
+## The pages
 
-**Behaviour > Paths** shows the paths by the address of a page or by its title.
+**Paths** in the reporting menu has a page for each view. Every page can show the paths by the
+address of a page or by its title.
 
 - **Top paths** lists the most common whole paths: the pages a visit viewed, in order, until it
   left, and how many visits took exactly that route.
@@ -35,6 +36,22 @@ archives; to fill them for days that are archived already, run:
   they first came to it and in the two steps after, with how many started and how many left
   there. Click a page in the columns to look around that one. This part is read from the logs
   when you pick a page, so it takes longer on a long period.
+- **On the way to a goal** takes a goal you pick, or ecommerce orders, and shows what visits
+  viewed in the three steps before they first converted it and the page they converted on.
+  Under it, for the pages most converting visits viewed on the way: of all visits that viewed the
+  page, the share that converted afterwards, the share that left the website on that page
+  without converting, and the rest, who went on without converting. Like "Around a page" it is
+  read from the logs when you pick.
+
+  With the plugin RebelFunnels active, a funnel can be picked instead of a goal. It then counts
+  the visits that completed the funnel, from the action they reached its last step with. A visit
+  that reached the last step without an action, as with a form step, is left out.
+
+The choice between address and title is kept while you move between the pages.
+
+A row of Matomo's reports of page URLs, entry pages and exit pages has an action with the Paths
+icon. It opens "Around a page" for the page of that row. A page in the columns of "On the way to
+a goal" does the same.
 
 How it counts:
 
@@ -60,9 +77,18 @@ steps under each row. They take `idSite`, `period`, `date`, `segment`, `expanded
 (`nb_visits`) and those that left there (`nb_path_exits`).
 
 `RebelPaths.getPagesAroundPage` takes `idSite`, `period`, `date`, `page`, `byTitle` and `segment`.
-`page` is the page as the paths show it, such as `/pricing`, or its title with `byTitle=1`. It
+`page` is the page as the paths show it, such as `/pricing`, its whole address, or its title with
+`byTitle=1`. It
 returns the visits that came to the page, how many started and left there, and the pages of the
 steps -2, -1, 1 and 2.
+
+`RebelPaths.getPagesBeforeGoal` takes `idSite`, `period`, `date`, `idGoal`, `byTitle` and
+`segment`; `idGoal=0` is ecommerce orders. It returns the visits that converted, the pages of the
+steps -3 to 0, where 0 is the page they converted on, and under `pages` the visits, conversions
+and exits of the pages on the way.
+
+`RebelPaths.getPagesBeforeFunnel` is the same for a funnel of RebelFunnels, with `idFunnel` in
+place of `idGoal`.
 
 ## Development
 
