@@ -49,8 +49,8 @@ address of a page or by its title.
 
 The choice between address and title is kept while you move between the pages.
 
-A row of Matomo's reports of page URLs, entry pages and exit pages has an action with the Paths
-icon. It opens "Around a page" for the page of that row. A page in the columns of "On the way to
+A row of Matomo's reports of pages, entry pages and exit pages, by URL or by title, has an action
+with the Paths icon. It opens "Around a page" for the page of that row. A page in the columns of "On the way to
 a goal" does the same.
 
 How it counts:

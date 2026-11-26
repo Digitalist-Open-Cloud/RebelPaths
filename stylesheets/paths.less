@@ -110,9 +110,14 @@
       min-width: 760px;
     }
 
+    // The outline in the colour of the page keeps a name readable on top of a band.
     text {
       font-size: 12px;
       fill: @theme-color-text;
+      paint-order: stroke;
+      stroke: @theme-color-background-base;
+      stroke-width: 3px;
+      stroke-linejoin: round;
     }
 
     .rebelPathsFlowStep,
