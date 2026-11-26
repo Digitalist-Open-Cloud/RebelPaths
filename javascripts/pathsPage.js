@@ -25,7 +25,8 @@
     var FLOW_WIDTH = 1000;
     var FLOW_HEIGHT = 300;
     var FLOW_TOP = 26;
-    var FLOW_GAP = 12;
+    var FLOW_GAP = 8;
+    var FLOW_NAME = 14;
     var FLOW_NODE = 12;
     var FLOW_LABEL = 170;
     var FLOW_LABEL_LENGTH = 26;
@@ -108,7 +109,7 @@
         };
         var scale = FLOW_HEIGHT / Math.max.apply(null, flow.columns.map(total));
         var height = FLOW_TOP + Math.max.apply(null, flow.columns.map(function (nodes) {
-            return total(nodes) * scale + nodes.length * FLOW_GAP;
+            return nodes.reduce(function (sum, node) { return sum + Math.max(node.v * scale, FLOW_NAME) + FLOW_GAP; }, 0);
         }));
         var chart = svg('svg', { viewBox: '0 0 ' + FLOW_WIDTH + ' ' + height, role: 'img', 'aria-label': texts.flow });
         var linkLayer = chart.appendChild(svg('g', {}));
@@ -126,7 +127,8 @@
                 node.h = Math.max(1, node.v * scale);
                 node.out = 0;
                 node.into = 0;
-                y += node.h + FLOW_GAP;
+                // A page with few visits still gets the room of its name.
+                y += Math.max(node.h, FLOW_NAME) + FLOW_GAP;
             });
         });
 
@@ -292,8 +294,16 @@
         return url ? url.hashParsed.value : {};
     }
 
-    // Opens the page that looks around a page, for the page with this label or address.
-    window.rebelPathsLookAround = function (page) {
+    // Opens the page that looks around a page, for the page with this label or address. With
+    // "urls" or "titles" that is what the page is taken as, otherwise as what was chosen last.
+    window.rebelPathsLookAround = function (page, by) {
+        if (by) {
+            try {
+                window.sessionStorage.setItem(REMEMBERED, by);
+            } catch (e) {
+                // No storage in this browser: the page is taken as an address.
+            }
+        }
         var parameters = {};
         var current = hashParameters();
         Object.keys(current).forEach(function (name) {
@@ -374,7 +384,7 @@
     function drawGoal(root, before, goalName, isFunnel) {
         var texts = root.rebelPaths.texts;
         var box = root.querySelector('.rebelPathsToGoal');
-        var pick = window.rebelPathsLookAround;
+        var pick = function (label) { window.rebelPathsLookAround(label); };
         box.textContent = '';
         if (!before.nb_visits) {
             box.appendChild(el('p', 'rebelPathsHint', texts.noData));

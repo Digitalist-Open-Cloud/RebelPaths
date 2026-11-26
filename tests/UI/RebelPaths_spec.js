@@ -178,4 +178,17 @@ describe('RebelPaths', function () {
 
         expect((await columns('.rebelPathsAround'))[3]).to.deep.equal(['/signup1', '2 left here']);
     });
+
+    it('should open the page around a page by its title from a row of the page titles report', async function () {
+        await page.goto(`?module=CoreHome&action=index&${params}#?${params}&category=General_Actions&subcategory=Actions_SubmenuPageTitles`);
+        await page.waitForSelector('.dataTable[data-report="Actions.getPageTitles"] tbody tr');
+        await page.waitForNetworkIdle();
+
+        const row = await page.jQuery('.dataTable[data-report="Actions.getPageTitles"] tbody tr:contains(Pricing):first');
+        await row.hover();
+        await (await row.$('a.actionRebelPaths')).click();
+        await page.waitForFunction(() => document.querySelector('.rebelPathsAround .rebelPathsAroundCentre')?.textContent.startsWith('Pricing'));
+
+        expect((await columns('.rebelPathsAround'))[3]).to.deep.equal(['Sign up1', '2 left here']);
+    });
 });

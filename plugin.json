@@ -1,7 +1,7 @@
 {
     "name": "RebelPaths",
     "description": "See the paths visitors take through your website: which pages they go to, step by step, and where they leave.",
-    "version": "5.0.0",
+    "version": "5.1.0",
     "theme": false,
     "require": {
         "matomo": ">=5.14.1-stable,<6.0.0-b1",
