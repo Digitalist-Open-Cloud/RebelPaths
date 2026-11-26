@@ -74,18 +74,52 @@ class API extends \Piwik\Plugin\API
     {
         Piwik::checkUserHasViewAccess($idSite);
 
-        $around = (new PagesAround())->get($idSite, (string) $period, (string) $date, Common::unsanitizeInputValue($page), !$byTitle, Common::unsanitizeInputValue((string) $segment));
+        $around = (new PagesAround($idSite, (string) $period, (string) $date, !$byTitle, Common::unsanitizeInputValue((string) $segment)))
+            ->getForPage(Common::unsanitizeInputValue($page));
+        $around['steps'] = $this->toReadableSteps($around['steps']);
 
-        $translate = function (string $label): string {
-            return $label === Paths::SEARCH ? Piwik::translate(Paths::SEARCH) : Common::unsanitizeInputValue($label);
-        };
-        foreach ($around['steps'] as &$pages) {
-            foreach ($pages as &$step) {
-                $step['label'] = $translate($step['label']);
+        return $around;
+    }
+
+    /**
+     * What visits viewed in the three steps before they first converted a goal and the page they
+     * converted on. Under "pages": for the pages most of them viewed on the way, the visits that
+     * viewed the page, those that converted after it and those that left the website on it
+     * without converting.
+     *
+     * @param int $idSite
+     * @param string $period
+     * @param string $date
+     * @param int $idGoal the ID of a goal, or 0 for ecommerce orders
+     * @param bool $byTitle
+     * @param string|false $segment
+     * @return array
+     */
+    public function getPagesBeforeGoal(int $idSite, $period, $date, int $idGoal, bool $byTitle = false, $segment = false): array
+    {
+        Piwik::checkUserHasViewAccess($idSite);
+
+        $before = (new PagesAround($idSite, (string) $period, (string) $date, !$byTitle, Common::unsanitizeInputValue((string) $segment)))
+            ->getForGoal($idGoal);
+        $before['steps'] = $this->toReadableSteps($before['steps']);
+        $before['pages'] = $this->toReadableSteps([$before['pages']])[0];
+
+        return $before;
+    }
+
+    /**
+     * @param array<int, array<int, array<string, mixed>>> $steps
+     * @return array<int, array<int, array<string, mixed>>> with labels as they are shown
+     */
+    private function toReadableSteps(array $steps): array
+    {
+        foreach ($steps as &$pages) {
+            foreach ($pages as &$page) {
+                $page['label'] = $page['label'] === Paths::SEARCH ? Piwik::translate(Paths::SEARCH) : Common::unsanitizeInputValue($page['label']);
             }
         }
 
-        return $around;
+        return $steps;
     }
 
     /**

@@ -34,7 +34,7 @@ class Paths extends RecordBuilder
     public const SEARCH = 'RebelPaths_SiteSearch';
 
     // Stands for a search among the IDs of pages. No page has an ID this high.
-    private const SEARCH_ID = 4294967295;
+    public const SEARCH_ID = 4294967295;
 
     // ponytail: the most common paths of a day are kept and the rest of a step is "Others". Raise it,
     // or make it a setting, if a website with many pages loses too much to "Others".

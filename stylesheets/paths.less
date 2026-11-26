@@ -1,10 +1,6 @@
 @rebelPathsLeft: #c8553d;
 
 .rebelPaths {
-  h3 {
-    margin: 28px 0 4px;
-  }
-
   .rebelPathsHelp {
     color: @theme-color-text-lighter;
     max-width: 70ch;
@@ -14,6 +10,7 @@
   .rebelPathsSwitch {
     display: flex;
     gap: 6px;
+    margin-bottom: 18px;
   }
 
   .rebelPathsBy {
@@ -180,7 +177,52 @@
     }
   }
 
-  .rebelPathsAround {
+  .rebelPathsOnTheWayTitle {
+    margin: 22px 0 4px;
+    font-size: 15px;
+  }
+
+  .rebelPathsLegendElsewhere {
+    background: @theme-color-border;
+  }
+
+  .rebelPathsWay {
+    display: grid;
+    grid-template-columns: minmax(120px, 1fr) minmax(160px, 2fr) minmax(200px, 1.4fr);
+    gap: 14px;
+    align-items: center;
+    padding: 7px 0;
+    border-bottom: 1px solid @theme-color-background-tinyContrast;
+  }
+
+  .rebelPathsWayLabel {
+    overflow-wrap: anywhere;
+  }
+
+  .rebelPathsWayBar {
+    display: flex;
+    height: 12px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: @theme-color-border;
+  }
+
+  .rebelPathsWayConverted {
+    background: @theme-color-brand;
+  }
+
+  .rebelPathsWayLeft {
+    background: @rebelPathsLeft;
+  }
+
+  .rebelPathsWayNumbers {
+    color: @theme-color-text-lighter;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rebelPathsAround,
+  .rebelPathsToGoal {
     display: grid;
     grid-template-columns: repeat(5, minmax(170px, 1fr));
     gap: 12px;

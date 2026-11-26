@@ -9,19 +9,13 @@
 
 namespace Piwik\Plugins\RebelPaths\Categories;
 
-use Piwik\Category\Subcategory;
-use Piwik\Piwik;
+use Piwik\Category\Category;
 
-class PathsSubcategory extends Subcategory
+class PathsCategory extends Category
 {
     public const ID = 'RebelPaths_Paths';
 
-    protected $categoryId = 'General_Actions';
     protected $id = self::ID;
-    protected $order = 45;
-
-    public function getHelp()
-    {
-        return '<p>' . Piwik::translate('RebelPaths_PathsHelp') . '</p>';
-    }
+    protected $order = 12;
+    protected $icon = 'rebelPathsIcon';
 }

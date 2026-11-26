@@ -7,23 +7,37 @@
  * @license https://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
-namespace Piwik\Plugins\RebelPaths\Widgets;
+namespace Piwik\Plugins\RebelPaths;
 
 use Piwik\API\Request as ApiRequest;
 use Piwik\Common;
 use Piwik\DataTable;
 use Piwik\Piwik;
-use Piwik\Plugins\RebelPaths\Categories\PathsSubcategory;
+use Piwik\Plugins\RebelPaths\Categories\PathsCategory;
 use Piwik\Plugins\RebelPaths\RecordBuilders\Paths;
 use Piwik\Request;
+use Piwik\Site;
+use Piwik\Tracker\GoalManager;
 use Piwik\Widget\Widget;
 use Piwik\Widget\WidgetConfig;
 
 /**
- * The page of the paths: the most common whole paths, and the steps to explore one at a time.
+ * A page of the paths. Each page shows one view of them, by address or by title.
  */
-class GetPathsOverview extends Widget
+abstract class PathsPage extends Widget
 {
+    // The pages by the ID of their subcategory, in the order of the menu, with the key of their help text.
+    public const PAGES = [
+        'RebelPaths_TopPaths' => 'RebelPaths_TopPathsHelp',
+        'RebelPaths_Flow' => 'RebelPaths_FlowHelp',
+        'RebelPaths_StepExplorer' => 'RebelPaths_StepExplorerHelp',
+        'RebelPaths_AroundAPage' => 'RebelPaths_AroundAPageHelp',
+        'RebelPaths_ToAGoal' => 'RebelPaths_ToAGoalHelp',
+    ];
+
+    // The ID of the subcategory the page is, set by each page.
+    protected const PAGE = '';
+
     private const TOP_PATHS = 10;
 
     // ponytail: the explorer gets its steps with the page. Load a step when it is picked if a website
@@ -35,9 +49,9 @@ class GetPathsOverview extends Widget
 
     public static function configure(WidgetConfig $config)
     {
-        $config->setCategoryId('General_Actions');
-        $config->setSubcategoryId(PathsSubcategory::ID);
-        $config->setName('RebelPaths_Paths');
+        $config->setCategoryId(PathsCategory::ID);
+        $config->setSubcategoryId(static::PAGE);
+        $config->setName(static::PAGE);
         $config->setIsWide();
         $config->setOrder(1);
     }
@@ -70,7 +84,17 @@ class GetPathsOverview extends Widget
             $views[$by] = ['top' => $top, 'max' => $top[0]['visits'] ?? 0, 'steps' => $this->toSteps($table)];
         }
 
-        return $this->renderTemplate('pathsOverview', [
+        $goals = [];
+        foreach (ApiRequest::processRequest('Goals.getGoals', ['idSite' => $idSite, 'filter_limit' => -1], []) as $goal) {
+            $goals[(int) $goal['idgoal']] = Common::unsanitizeInputValue($goal['name']);
+        }
+        if (Site::isEcommerceEnabledFor($idSite)) {
+            $goals[GoalManager::IDGOAL_ORDER] = Piwik::translate('RebelPaths_EcommerceOrders');
+        }
+
+        return $this->renderTemplate('pathsPage', [
+            'page' => static::PAGE,
+            'goals' => $goals,
             'views' => $views,
             'steps' => array_map(fn (array $view) => $view['steps'], $views),
             'maxSteps' => Paths::STEPS,
@@ -82,11 +106,16 @@ class GetPathsOverview extends Widget
                 'noData' => Piwik::translate('CoreHome_ThereIsNoDataForThisReport'),
                 'pick' => Piwik::translate('RebelPaths_PickAPage'),
                 'search' => Piwik::translate(Paths::SEARCH),
+                'flow' => Piwik::translate('RebelPaths_Flow'),
                 'loading' => Piwik::translate('General_LoadingData'),
                 'thePage' => Piwik::translate('RebelPaths_ThePage'),
                 'visits' => Piwik::translate('General_ColumnNbVisits'),
                 'startedHere' => Piwik::translate('RebelPaths_StartedHere'),
                 'endedHere' => Piwik::translate('RebelPaths_EndedHere'),
+                'convertedOn' => Piwik::translate('RebelPaths_ConvertedOn'),
+                'converted' => Piwik::translate('RebelPaths_VisitsConverted'),
+                'onTheWay' => Piwik::translate('RebelPaths_OnTheWayRow'),
+                'threeBefore' => Piwik::translate('RebelPaths_ThreeStepsBefore'),
                 'around' => [
                     '-2' => Piwik::translate('RebelPaths_TwoStepsBefore'),
                     '-1' => Piwik::translate('RebelPaths_OneStepBefore'),

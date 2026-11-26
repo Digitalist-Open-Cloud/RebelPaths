@@ -12,7 +12,7 @@ namespace Piwik\Plugins\RebelPaths\Reports;
 use Piwik\Piwik;
 use Piwik\Plugin\Report;
 use Piwik\Plugin\ViewDataTable;
-use Piwik\Plugins\RebelPaths\Categories\PathsSubcategory;
+use Piwik\Plugins\RebelPaths\Categories\PathsCategory;
 use Piwik\Plugins\RebelPaths\Columns\PathStep;
 use Piwik\Plugins\RebelPaths\Metrics\ExitRate;
 use Piwik\Plugins\RebelPaths\RecordBuilders\Paths;
@@ -29,8 +29,8 @@ class GetPaths extends Report
 
         $this->name = Piwik::translate('RebelPaths_PathsByUrl');
         $this->documentation = Piwik::translate('RebelPaths_PathsDocumentation', Paths::STEPS);
-        $this->categoryId = 'General_Actions';
-        $this->subcategoryId = PathsSubcategory::ID;
+        $this->categoryId = PathsCategory::ID;
+        $this->subcategoryId = 'RebelPaths_TopPaths';
         $this->dimension = new PathStep();
         $this->metrics = ['nb_visits', 'nb_path_exits'];
         $this->processedMetrics = [new ExitRate()];
