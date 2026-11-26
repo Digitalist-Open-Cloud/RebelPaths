@@ -13,6 +13,7 @@ use Exception;
 use Piwik\API\Request;
 use Piwik\Archive;
 use Piwik\Common;
+use Piwik\Container\StaticContainer;
 use Piwik\DataTable;
 use Piwik\Piwik;
 use Piwik\Plugin\Manager;
@@ -150,7 +151,8 @@ class API extends \Piwik\Plugin\API
      */
     public static function canUseFunnels(): bool
     {
-        return Manager::getInstance()->isPluginActivated('RebelFunnels') && method_exists(self::FUNNEL_COUNTER, 'getCompletions');
+        return Manager::getInstance()->isPluginActivated('RebelFunnels')
+            && method_exists(StaticContainer::get(self::FUNNEL_COUNTER), 'getCompletions');
     }
 
     /**
